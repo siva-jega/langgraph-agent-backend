@@ -89,7 +89,9 @@ The service is deployed as a Kubernetes `Deployment` managed by Helm. The `deplo
 |---|---|---|
 | `9005` | HTTP | Main API |
 
-Readiness/liveness probe: `GET /health` → `{"status": "ok"}`
+Liveness probe: `GET /health` returns HTTP 200 while the process is serving.
+Readiness probe: `GET /ready` returns HTTP 200 when startup and configured
+dependencies are ready, or HTTP 503 when a required dependency check fails.
 
 ## Logging and observability
 

@@ -47,7 +47,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
-_EXCLUDED_URLS_RE = r"/(?:health|metrics)(?:/.*)?$|/ops/milvus-warmup/?$"
+_EXCLUDED_URLS_RE = r"/(?:health|ready|metrics)(?:/.*)?$|/ops/milvus-warmup/?$"
 
 
 # --------------------------------------------------------------------------- #

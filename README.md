@@ -31,9 +31,16 @@ cd langgraph-agent-backend
 cp .env.example .env      # fill in required values
 docker compose up         # Postgres + Redis via compose; Milvus separate
 ./run.sh                  # starts uvicorn on :9005
+python scripts/doctor.py --base-url http://127.0.0.1:9005
 ```
 
 See [Local Setup](docs/setup.md) for the full walkthrough.
+
+`/health` confirms the process is alive. `/ready` checks startup and configured
+Postgres and Redis connections, plus Milvus client initialization. The doctor
+command prints the results and exits with a nonzero status when the API is not
+ready. Configure `READINESS_TIMEOUT_SECONDS` and `READINESS_CACHE_SECONDS` to
+tune the dependency check timeout and cache duration.
 
 ## Tech stack
 

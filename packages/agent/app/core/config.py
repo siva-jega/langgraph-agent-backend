@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 # override=True so .env is authoritative over stale shell/launchctl-exported vars
 load_dotenv(override=True)
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -103,6 +103,8 @@ class AppSettings(BaseSettings):
     MILVUS_WARMUP_QUERY: str = "black t-shirt"
     MILVUS_WARMUP_TTL_SECONDS: int = Field(default=300, ge=0)
     MILVUS_WARMUP_SCOPES_JSON: str | None = None
+    READINESS_TIMEOUT_SECONDS: float = Field(default=1.0, gt=0, le=10)
+    READINESS_CACHE_SECONDS: float = Field(default=2.0, ge=0, le=30)
 
     #: Fallback image shown in product carousel cards when a product has no image URL.
     PRODUCT_FALLBACK_IMAGE_URL: str = ""
@@ -185,14 +187,6 @@ class AppSettings(BaseSettings):
     # Checkpoint
     CHECKPOINT_TYPE: str = "postgres"
     CHECKPOINT_PERSISTENCE: bool = True
-
-    @model_validator(mode="after")
-    def _resolve_nestjs_url(self) -> "AppSettings":
-        if not self.NESTJS_URL:
-            self.NESTJS_URL = (
-                self.BACKEND_URL or self.USER_BACKEND_URL or STAGING_NESTJS_BASE_URL
-            )
-        return self
 
     @field_validator("OTEL_DISABLE", mode="before")
     @classmethod

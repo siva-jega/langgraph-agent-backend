@@ -137,7 +137,12 @@ This builds and starts:
 ```bash
 # Agent service
 curl http://localhost:8000/health
-# {"status": "ok"}
+# {"status": "healthy", "service": "assistant-api"}
+
+curl http://localhost:8000/ready
+# dependency readiness and startup status
+
+python scripts/doctor.py --base-url http://localhost:8000
 
 curl http://localhost:8000/api/tools
 # {"providers": ["web", "shopify", ...], "tools": [...]}

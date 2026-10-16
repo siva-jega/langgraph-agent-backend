@@ -16,6 +16,7 @@ from prometheus_client import make_asgi_app
 from app.core.config import app_settings
 from app.modules.ops.route import router as ops_router
 from app.modules.ops.service import MilvusWarmupService
+from app.modules.ops.readiness import ReadinessService
 from common.project_settings import bind_project_settings
 
 bind_project_settings(lambda: app_settings)
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.state.milvus_warmup_service = MilvusWarmupService(app_settings)
+    app.state.readiness_service = ReadinessService(app_settings)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.ALLOW_ORIGINS,
@@ -79,6 +81,13 @@ def create_app() -> FastAPI:
     async def health_check() -> Dict[str, str]:
         """Health check endpoint for the API."""
         return {"status": "healthy", "service": "assistant-api"}
+
+    @app.get("/ready", tags=["Ops"])
+    @otel_utils.no_trace
+    async def readiness_check():
+        """Check startup and configured infrastructure before serving traffic."""
+        snapshot = await app.state.readiness_service.snapshot(app)
+        return JSONResponse(status_code=snapshot.http_status, content=snapshot.as_dict())
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request, exc):

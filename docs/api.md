@@ -14,8 +14,33 @@ No auth required.
 
 **Response `200`**
 ```json
-{"status": "ok"}
+{"status": "healthy", "service": "assistant-api"}
 ```
+
+### `GET /ready`
+
+No auth required. Returns `200` when startup is complete and configured
+dependencies are ready, or `503` when a required check fails. Unconfigured
+Postgres, Redis, and Milvus are marked `skipped`. The Milvus check confirms
+client initialization; it does not query the vector database.
+
+```json
+{
+  "status": "ready",
+  "checked_at": "2026-10-16T12:00:00+00:00",
+  "checks": {
+    "checkpointer": {"status": "ok", "duration_ms": 0.0},
+    "postgres": {"status": "skipped", "duration_ms": 0.0},
+    "redis": {"status": "skipped", "duration_ms": 0.0},
+    "milvus_client": {"status": "skipped", "duration_ms": 0.0}
+  }
+}
+```
+
+The response contains status and timings only; it does not include URLs,
+credentials, or exception details. Results are cached briefly to limit probe
+load. Run `python scripts/doctor.py --base-url http://127.0.0.1:9005` for a
+terminal summary or add `--json` for machine-readable output.
 
 ---
 

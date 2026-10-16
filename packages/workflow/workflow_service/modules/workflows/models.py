@@ -13,6 +13,14 @@ class WorkflowStatus(str, Enum):
     INACTIVE = "INACTIVE"
 
 
+class TriggerType(str, Enum):
+    CONVERSATION_EVENT = "CONVERSATION_EVENT"
+    SCHEDULE = "SCHEDULE"
+    WEBHOOK = "WEBHOOK"
+    MANUAL = "MANUAL"
+    INTEGRATION_EVENT = "INTEGRATION_EVENT"
+
+
 class NodeCategory(str, Enum):
     TRIGGER = "TRIGGER"
     ACTION = "ACTION"

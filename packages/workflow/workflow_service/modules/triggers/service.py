@@ -79,7 +79,7 @@ async def update_trigger(
     if data.isActive is not None:
         fields["isActive"] = data.isActive
 
-    row = await _trigger_repo.update(trigger_id, fields)
+    row = await _trigger_repo.update(workflow_id, trigger_id, fields)
     if not row:
         raise HTTPException(status_code=404, detail="Trigger not found")
     return _to_response(row)
@@ -89,7 +89,7 @@ async def delete_trigger(
     workflow_id: str, workspace_id: str, trigger_id: str
 ) -> dict:
     await _verify_workflow(workflow_id, workspace_id)
-    deleted = await _trigger_repo.delete(trigger_id)
+    deleted = await _trigger_repo.delete(workflow_id, trigger_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Trigger not found")
     return {"success": True}

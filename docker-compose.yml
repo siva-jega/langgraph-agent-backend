@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9005"]
+    env_file:
+      - .env
+    ports:
+      - "9005:9005"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:9005/health"]
+      interval: 120s
+      timeout: 3s
+    restart: unless-stopped
+
+  workflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "workflow_service.main:app", "--host", "0.0.0.0", "--port", "9006"]
+    env_file:
+      - .env
+    ports:
+      - "9006:9006"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:9006/health"]
+      interval: 120s
+      timeout: 3s
+    restart: unless-stopped
+    

@@ -1,0 +1,63 @@
+[project]
+name = "agent-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "../../README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "shared",
+    "asyncpg>=0.29.0",
+    "cohere>=5.18.0",
+    "fastapi>=0.133.0",  # >=0.133 lifts the starlette<1.0 cap, needed for starlette>=1.3.1 (GHSA-82w8-qh3p-5jfq, GHSA-wqp7-x3pw-xc5r)
+    "httpx>=0.27.0",
+    "langchain>=1.1.0",
+    "langchain-openai>=0.3.35",
+    "langgraph>=1.2.0",
+    "langgraph-checkpoint-postgres>=3.1.0",
+    "psycopg[binary]>=3.1.0",
+    "psycopg_pool>=3.2.0",
+    "prometheus-client>=0.23.1",
+    "pydantic-settings>=2.11.0",
+    "pymilvus>=2.6.2",
+    "redis>=6.4.0",
+    "tavily-python>=0.7.12",
+    "uvicorn>=0.37.0",
+    "opentelemetry-distro[otlp]>=0.55b1",
+    "opentelemetry-instrumentation-fastapi>=0.64b0",  # 0.64b0 flattens FastAPI 0.137 _IncludedRouter tree; <0.62 crashes on route.path
+    "opentelemetry-instrumentation-requests>=0.55b1",
+    "opentelemetry-instrumentation-httpx>=0.55b1",
+    "opentelemetry-instrumentation-openai>=0.40.12",
+    "opentelemetry-instrumentation-asyncpg>=0.55b1",
+    "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "cryptography>=48.0.1",
+    "google-api-python-client>=2.185.0",
+    "google-auth-oauthlib>=1.2.2",
+    "html2text>=2025.4.15",
+    "aiogoogle>=5.17.0",
+    "mem0ai>=1.0.0",
+    "pyjwt>=2.13.0",
+    "langchain-google-genai>=4.1.1",
+    "geoip2>=5.2.0",
+    "tools>=1.0.23",
+    "opentelemetry-instrumentation-milvus>=0.53.0",
+    "toon-format>=0.1.0",
+    "python-multipart>=0.0.30",
+    "aioboto3>=13.1.1",
+    "jinja2>=3.1.6",
+    # LangSmith — eval + tracing platform. Auto-traces LangChain runs when
+    # LANGSMITH_TRACING=true; SDK powers the evals module (see EVAL_PLAN.md).
+    "langsmith>=0.1.100",
+    "headroom-ai[langchain]>=0.26.0",
+]
+
+[tool.uv.sources]
+shared = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.26.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

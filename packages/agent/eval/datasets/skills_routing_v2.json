@@ -1,0 +1,199 @@
+{
+  "version": "skills_routing_v2",
+  "description": "Single-turn default-skill tool-routing eval for the three configurable mapTo skills: Ticket Creation (create_ticket_aide / TICKET), Customer Creation (create_lead_aide / CUSTOMER), and Human Handoff (human_handoff_trigger / HANDOFF). Every case is ONE self-contained user message whose intent is clear enough to route on the spot — the agent should call exactly one skill tool (or none, for negatives/boundaries). No multi-turn flows: the aide tools are interrupt-style and collect name+email via their own form after they fire, so the routing decision happens on the first turn. Bare 'yes'/'name, email' follow-ups never route on their own and are intentionally excluded. Run with the trajectory judge alone (routing_judges()).",
+  "notes": [
+    "Default whenToUse descriptions these cases are built from (prompt.py SKILL_DESCRIPTIONS / skills.seed.ts):",
+    "  create_ticket_aide: 'Create a support ticket. Call when the user reports an order issue, complaint, refund/return request, product defect, or service failure.' Triggers: order issue, complaint, refund, return, product defect, service failure.",
+    "  create_lead_aide: 'Register the user as a potential customer or lead. Call when the user expresses purchase intent, requests a callback, asks for a quote, or wants to be contacted by sales.' Triggers: purchase intent, callback, quote, contact-by-sales.",
+    "  human_handoff_trigger: 'Transfer the conversation to a human agent. Call when the user explicitly asks to speak with a human/real person, expresses frustration, or the issue is too complex to resolve automatically.' Triggers: explicit human/real-person request, frustration, too complex.",
+    "Each positive query is concrete (states the actual problem/intent) so create_ticket_aide's required `reason` argument is derivable and the skill can fire on the first turn.",
+    "trajectory_evaluator scores expected_tools as the COMPLETE expected set with set semantics (order-independent). Cases are scoped so exactly one skill tool — or no tool at all — is correct.",
+    "DISAMBIGUATION RULES used for the boundary cases (flip expected_tools here if your router prompt resolves these differently):",
+    "  (1) An explicit request for a human/real person wins over a co-mentioned order problem -> HANDOFF, not TICKET. (boundary-handoff-over-ticket)",
+    "  (2) Frustration attached to a concrete, resolvable request (refund/return/defect) is still a TICKET; frustration alone is not enough to hand off. (boundary-frustration-resolvable)",
+    "  (3) Trigger WORDS inside a general question are not requests: 'do you offer refunds?' (policy q) != refund request; 'how much is X?' (price q) != quote request. Answer, don't route -> expected_tools [].",
+    "  (4) Mixed past-issue + new purchase intent -> the operative intent is the purchase -> CUSTOMER. (boundary-mixed-return-then-buy)",
+    "  (5) A callback requested to FIX a problem is support -> TICKET; a callback about buying/pricing is CUSTOMER. (boundary-callback-for-problem)",
+    "Negative cases (expected_tools:[]) guard a trigger-happy agent: greetings, thanks, and the rule (3) trigger-word questions.",
+    "Repoint agent_id to your all-skills eval agent before running. All cases are single-turn, so any --concurrency is safe. Verify tool names against skills.seed.ts if they drift."
+  ],
+  "cases": [
+    {
+      "id": "ticket-orderissue-001",
+      "query": "my order shipped two weeks ago and still hasn't arrived, can you help me sort this out?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:order-issue"]
+    },
+    {
+      "id": "ticket-orderissue-002",
+      "query": "order #1242 says delivered but nothing actually showed up at my door",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:order-issue"]
+    },
+    {
+      "id": "ticket-complaint-001",
+      "query": "I want to file a complaint about how rudely your staff treated me on the phone",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:complaint"]
+    },
+    {
+      "id": "ticket-refund-001",
+      "query": "I'd like a refund for the jacket I ordered last week, it doesn't fit at all",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:refund-request"]
+    },
+    {
+      "id": "ticket-refund-002",
+      "query": "please refund my last order, the item is completely different from what was advertised",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:refund-request"]
+    },
+    {
+      "id": "ticket-return-001",
+      "query": "the shoes I received are the wrong size, I need to return them",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:return-request"]
+    },
+    {
+      "id": "ticket-defect-001",
+      "query": "the blender I bought stopped working after two days, it's clearly defective",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:product-defect"]
+    },
+    {
+      "id": "ticket-servicefail-001",
+      "query": "your delivery courier left my parcel at the wrong address and no one will help me — total service failure",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["ticket", "ticket-creation", "trigger:service-failure"]
+    },
+    {
+      "id": "lead-purchase-001",
+      "query": "I'm interested in buying 50 units of your standing desk for my office",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_lead_aide"],
+      "tags": ["lead", "customer-creation", "trigger:purchase-intent"]
+    },
+    {
+      "id": "lead-purchase-002",
+      "query": "we want to place a bulk order of 200 office chairs for our new branch, who do I talk to?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_lead_aide"],
+      "tags": ["lead", "customer-creation", "trigger:purchase-intent"]
+    },
+    {
+      "id": "lead-callback-001",
+      "query": "can someone call me back to discuss your enterprise plans?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_lead_aide"],
+      "tags": ["lead", "customer-creation", "trigger:callback"]
+    },
+    {
+      "id": "lead-quote-001",
+      "query": "could I get a quote for wholesale pricing on 200 t-shirts?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_lead_aide"],
+      "tags": ["lead", "customer-creation", "trigger:quote"]
+    },
+    {
+      "id": "lead-salescontact-001",
+      "query": "I'd like someone from your sales team to reach out to me",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_lead_aide"],
+      "tags": ["lead", "customer-creation", "trigger:contact-by-sales"]
+    },
+    {
+      "id": "handoff-explicit-human-001",
+      "query": "can I talk to a human please?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["handoff", "human-handoff", "trigger:explicit-human"]
+    },
+    {
+      "id": "handoff-real-person-001",
+      "query": "stop sending me bot answers, connect me to a real person",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["handoff", "human-handoff", "trigger:real-person"]
+    },
+    {
+      "id": "handoff-polite-agent-001",
+      "query": "would it be possible to be put through to one of your agents?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": [
+        "handoff",
+        "human-handoff",
+        "trigger:explicit-human",
+        "phrasing:indirect"
+      ]
+    },
+    {
+      "id": "handoff-frustration-001",
+      "query": "this is absolutely infuriating, I've been going in circles for an hour and getting nowhere",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["handoff", "human-handoff", "trigger:frustration"]
+    },
+    {
+      "id": "handoff-too-complex-001",
+      "query": "this is way too complicated to sort out in chat — I have a multi-account billing migration with disputed charges across three invoices",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["handoff", "human-handoff", "trigger:too-complex"]
+    },
+    {
+      "id": "boundary-handoff-over-ticket-001",
+      "query": "I'm so done with this — my order arrived smashed AGAIN and I want to speak to a real person right now",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["boundary", "handoff", "ticket", "rule:explicit-human-wins"]
+    },
+    {
+      "id": "boundary-frustration-resolvable-001",
+      "query": "honestly really annoyed that my order showed up damaged, I just want a refund sorted out",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["boundary", "ticket", "handoff", "rule:frustration-resolvable"]
+    },
+    {
+      "id": "boundary-mixed-return-then-buy-001",
+      "query": "I returned my last order ages ago, anyway — now I want to buy 100 units for our new store, can sales contact me?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_lead_aide"],
+      "tags": ["boundary", "lead", "ticket", "rule:purchase-intent-wins"]
+    },
+    {
+      "id": "boundary-callback-for-problem-001",
+      "query": "can someone call me to help fix my order that never arrived?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["create_ticket_aide"],
+      "tags": [
+        "boundary",
+        "ticket",
+        "lead",
+        "rule:callback-for-problem-is-support"
+      ]
+    },
+    {
+      "id": "boundary-mild-frustration-001",
+      "query": "ugh this website is kind of confusing to navigate",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [],
+      "tags": [
+        "boundary",
+        "negative",
+        "over-trigger",
+        "handoff",
+        "rule:mild-frustration-not-handoff"
+      ]
+    }
+  ]
+}

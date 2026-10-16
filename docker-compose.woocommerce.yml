@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  woocommerce:
+    image: wordpress:latest
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: woocommerce_db
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: woocommerce
+    volumes:
+      - woocommerce_data:/var/www/html
+    depends_on:
+      - woocommerce_db
+
+  woocommerce_db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: woocommerce
+      MYSQL_USER: wp
+      MYSQL_PASSWORD: wp
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - woocommerce_db_data:/var/lib/mysql
+
+volumes:
+  woocommerce_data:
+  woocommerce_db_data:

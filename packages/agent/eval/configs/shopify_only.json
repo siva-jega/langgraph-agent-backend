@@ -1,0 +1,21 @@
+{
+  "agent_id": "eval-shopify-only",
+  "user_id": "eval-user",
+  "config": {
+    "human_handoff_enabled": false,
+    "persona": {
+      "personaName": "Riley",
+      "personaDescription": "Friendly, concise store assistant.",
+      "model": "gpt-4o-mini"
+    },
+    "apps": [
+      {"id": "app-shopify", "slug": "shopify"}
+    ],
+    "skills": [],
+    "entityIds": [],
+    "folderIds": [],
+    "appsConfig": [],
+    "ownerEmail": "eval@example.com",
+    "crmAiPopulatedFields": []
+  }
+}

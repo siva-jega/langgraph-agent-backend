@@ -1,0 +1,46 @@
+{
+  "version": "web_agent_template_v1",
+  "description": "Template-based fixture dataset for hermetic unit tests of the runner. Real evals use web_agent_v1.json against staging agent_ids; this one is for tests only.",
+  "cases": [
+    {
+      "id": "greet-001",
+      "query": "hey there",
+      "history": [],
+      "agent_config_template": "shopify_kb_aide",
+      "expected_tools": [],
+      "tags": ["greeting", "no-tool"]
+    },
+    {
+      "id": "product-001",
+      "query": "got any black hoodies in stock?",
+      "history": [],
+      "agent_config_template": "shopify_kb_aide",
+      "expected_tools": ["get_products"],
+      "tags": ["product"]
+    },
+    {
+      "id": "product-002",
+      "query": "do you sell raincoats?",
+      "history": [],
+      "agent_config_template": "shopify_only",
+      "expected_tools": ["get_products"],
+      "tags": ["product"]
+    },
+    {
+      "id": "policy-001",
+      "query": "what's your return window?",
+      "history": [],
+      "agent_config_template": "shopify_kb_aide",
+      "expected_tools": ["search_knowledgebase"],
+      "tags": ["policy"]
+    },
+    {
+      "id": "handoff-001",
+      "query": "please connect me to a human agent",
+      "history": [],
+      "agent_config_template": "shopify_kb_aide",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["handoff"]
+    }
+  ]
+}

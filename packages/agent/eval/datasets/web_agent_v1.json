@@ -1,0 +1,172 @@
+{
+  "version": "web_agent_v1",
+  "description": "Web-agent eval cases. Single-turn cases have no chat_id; multi-turn flows share a chat_id (UUID) across cases and order with `sequence`. The runner sets that chat_id as the LangGraph thread_id, so the production checkpointer threads history naturally.",
+  "notes": [
+    "All cases currently point at one staging agent (106f41ee-e09f-4536-8e38-c8178145429a). Once a second 'shopify_only' eval agent exists, repoint product-003 to it to test KB-less product routing.",
+    "Multi-turn flows: turns sharing a chat_id run serially in `sequence` order. The runner scopes the thread_id with the eval_run_id so re-running this dataset doesn't inherit yesterday's history.",
+    "Setup turns are marked `score_judges: false` so they build conversation context without dragging down judge averages — only the final turn of each multi-turn flow is scored."
+  ],
+  "cases": [
+    {
+      "id": "greet-001",
+      "query": "hey there",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [],
+      "tags": ["greeting", "no-tool"]
+    },
+    {
+      "id": "greet-002-setup-1",
+      "query": "do you sell jackets?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "632ff0e0-9293-48a9-83e8-466099b88075",
+      "sequence": 1,
+      "score_judges": false,
+      "expected_tools": ["get_products"],
+      "tags": ["greeting", "multi-turn"]
+    },
+    {
+      "id": "greet-002",
+      "query": "thanks!",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "632ff0e0-9293-48a9-83e8-466099b88075",
+      "sequence": 2,
+      "expected_tools": [],
+      "tags": ["greeting", "no-tool", "multi-turn"]
+    },
+    {
+      "id": "product-001",
+      "query": "got any black hoodies in stock?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["get_products"],
+      "tags": ["product", "shopify-vs-kb"]
+    },
+    {
+      "id": "product-002",
+      "query": "what's the cheapest jacket you have?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["get_products"],
+      "tags": ["product", "shopify-vs-kb"]
+    },
+    {
+      "id": "product-003",
+      "query": "do you sell raincoats?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["get_products"],
+      "tags": ["product"]
+    },
+    {
+      "id": "policy-001",
+      "query": "what's your return window?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["search_knowledgebase"],
+      "tags": ["policy", "shopify-vs-kb"]
+    },
+    {
+      "id": "policy-002",
+      "query": "do you ship internationally?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["search_knowledgebase"],
+      "tags": ["policy", "shopify-vs-kb"]
+    },
+    {
+      "id": "order-001",
+      "query": "where's my order #1242?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["get_order_status"],
+      "tags": ["order-status"]
+    },
+    {
+      "id": "order-002",
+      "query": "has my order shipped yet? order 9087",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["get_order_status"],
+      "tags": ["order-status"]
+    },
+    {
+      "id": "lead-001-setup-1",
+      "query": "can someone call me about a bulk order?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "4a12f47a-47bc-40ca-8a79-f5224dc42ab3",
+      "sequence": 1,
+      "score_judges": false,
+      "expected_tools": [],
+      "tags": ["lead-vs-ticket", "multi-turn"]
+    },
+    {
+      "id": "lead-001-setup-2",
+      "query": "Aditya, adi@example.com",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "4a12f47a-47bc-40ca-8a79-f5224dc42ab3",
+      "sequence": 2,
+      "score_judges": false,
+      "expected_tools": [],
+      "tags": ["lead-vs-ticket", "multi-turn"]
+    },
+    {
+      "id": "lead-001",
+      "query": "yes",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "4a12f47a-47bc-40ca-8a79-f5224dc42ab3",
+      "sequence": 3,
+      "expected_tools": ["create_lead_aide"],
+      "tags": ["lead-vs-ticket", "confirmation-flow", "multi-turn"]
+    },
+    {
+      "id": "lead-002",
+      "query": "I'd like a quote for wholesale pricing.",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [],
+      "tags": ["lead-vs-ticket", "asks-for-info-first"]
+    },
+    {
+      "id": "ticket-001-setup-1",
+      "query": "my order arrived broken, I want a refund",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "b8e07461-ec47-47e2-81a5-8ac8fd637522",
+      "sequence": 1,
+      "score_judges": false,
+      "expected_tools": [],
+      "tags": ["lead-vs-ticket", "multi-turn"]
+    },
+    {
+      "id": "ticket-001-setup-2",
+      "query": "Aditya, adi@example.com",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "b8e07461-ec47-47e2-81a5-8ac8fd637522",
+      "sequence": 2,
+      "score_judges": false,
+      "expected_tools": [],
+      "tags": ["lead-vs-ticket", "multi-turn"]
+    },
+    {
+      "id": "ticket-001",
+      "query": "yes please",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "b8e07461-ec47-47e2-81a5-8ac8fd637522",
+      "sequence": 3,
+      "expected_tools": ["create_ticket_aide"],
+      "tags": ["lead-vs-ticket", "confirmation-flow", "multi-turn"]
+    },
+    {
+      "id": "ticket-002",
+      "query": "the dress I got is the wrong size, I'd like to return it",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [],
+      "tags": ["lead-vs-ticket", "asks-for-info-first"]
+    },
+    {
+      "id": "handoff-001",
+      "query": "this is ridiculous, just connect me to a real person",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["handoff"]
+    },
+    {
+      "id": "handoff-002",
+      "query": "please connect me to a human agent",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": ["human_handoff_trigger"],
+      "tags": ["handoff"]
+    }
+  ]
+}

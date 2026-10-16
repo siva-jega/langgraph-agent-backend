@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lesson 0001: Trace a Chat Into LangGraph</title>
+    <link rel="stylesheet" href="../assets/course.css">
+  </head>
+  <body>
+    <main>
+      <h1>Trace a Chat Into LangGraph</h1>
+      <p class="lede">Your first win: follow one customer message from the HTTP endpoint into the LangGraph loop.</p>
+
+      <div class="callout">
+        <strong>Mission link:</strong> after this lesson, you should know which file to open first when debugging an agent response.
+      </div>
+
+      <h2>The Five Stops</h2>
+      <p>A chat request does not begin inside LangGraph. It reaches LangGraph only after FastAPI routing and service setup.</p>
+
+      <div class="map">
+        <div class="box"><b>FastAPI</b><code>main.py</code><br>Creates the app and mounts routes.</div>
+        <div class="box"><b>Route</b><code>agents/route.py</code><br>Receives <code>/api/agents/stream</code>.</div>
+        <div class="box"><b>Service</b><code>agents/service.py</code><br>Loads config and emits SSE.</div>
+        <div class="box"><b>Graph</b><code>graph/graph.py</code><br>Runs <code>self.graph.astream(...)</code>.</div>
+        <div class="box"><b>Nodes</b><code>graph/nodes.py</code><br>Trim, LLM, and tools logic.</div>
+      </div>
+
+      <h2>The Graph Loop</h2>
+      <pre><code>START -> trim -> llm
+
+if LLM asks for a tool:
+  llm -> tools -> trim -> llm
+
+if LLM is done:
+  llm -> escalation_check -> END</code></pre>
+
+      <p>The important trick is that <code>llm</code> is not always the final answer. Sometimes it produces a tool request. LangGraph sees that request and routes to <code>tools</code>.</p>
+
+      <h2>Why Tools Work</h2>
+      <p>In <code>nodes.py</code>, <code>_get_tools(config)</code> builds the available tool list from the agent's runtime config: apps, skills, knowledge-base IDs, folder IDs, and human handoff settings.</p>
+      <p>Then <code>llm_node</code> binds those tools to the model. If the model returns tool calls, <code>tools_condition</code> sends the graph to <code>tools_node</code>, which wraps LangGraph's <code>ToolNode</code>.</p>
+
+      <div class="callout warning">
+        <strong>Common confusion:</strong> the LLM chooses that a tool should be called, but the code executes the tool. That split is the heart of the ReAct loop.
+      </div>
+
+      <h2>Practice</h2>
+      <div class="check">
+        <p><strong>Question 1:</strong> If a user asks "Where is my order?", which node decides whether to call an order-status tool?</p>
+        <details>
+          <summary>Show answer</summary>
+          <p>The <code>llm</code> node. It calls the model with bound tools. The model may return a tool call, then <code>tools_condition</code> routes to <code>tools</code>.</p>
+        </details>
+      </div>
+
+      <div class="check">
+        <p><strong>Question 2:</strong> Which file contains the actual graph edges?</p>
+        <details>
+          <summary>Show answer</summary>
+          <p><code>packages/agent/app/modules/agents/graph/graph.py</code>, inside <code>Graph._build_graph()</code>.</p>
+        </details>
+      </div>
+
+      <div class="check">
+        <p><strong>Question 3:</strong> Which layer converts graph chunks into <code>event: chat_message</code> and <code>event: tool_call</code> SSE output?</p>
+        <details>
+          <summary>Show answer</summary>
+          <p><code>packages/agent/app/modules/agents/service.py</code>, inside <code>process_chat_request()</code>.</p>
+        </details>
+      </div>
+
+      <h2>Read Next</h2>
+      <p>Open the reference sheet: <a href="../reference/agent-langgraph-map.html">Agent LangGraph Map</a>.</p>
+      <p>Primary source: <a href="https://reference.langchain.com/python/langgraph.prebuilt/tool_node/tools_condition">LangGraph <code>tools_condition</code> reference</a>.</p>
+      <p class="tiny">Ask follow-up questions like: "explain <code>llm_node</code> line by line" or "show me how HITL resume works in this repo."</p>
+    </main>
+  </body>
+</html>

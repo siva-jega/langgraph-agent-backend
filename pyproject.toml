@@ -1,0 +1,51 @@
+[project]
+name = "ai-backend"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "agent-service",
+    "workflow-service",
+    "shared",
+]
+
+[tool.uv]
+# Security floors for transitive (indirect) dependencies. These packages are
+# not used directly, so they have no home in any package's dependency list, but
+# they were flagged by GitHub Dependabot high-severity alerts. Pinning them here
+# stops a future `uv lock --upgrade` from silently regressing below the patched
+# versions. Remove an entry only once no dependency can pull a vulnerable range.
+constraint-dependencies = [
+    "urllib3>=2.7.0",    # GHSA-qccp-gfcp-xxvc, GHSA-mf9v-mfxr-j63j
+    "aiohttp>=3.13.3",   # GHSA-6mq8-rvhq-8wgg
+    "pyasn1>=0.6.3",     # GHSA-jr27-m4p2-rc6r
+    "orjson>=3.11.6",    # GHSA-hx9q-6w63-j58v
+    "protobuf>=5.29.6",  # GHSA-7gcm-g887-7qv7
+    "langsmith>=0.8.0",  # GHSA-3644-q5cj-c5c7
+]
+
+[tool.uv.workspace]
+members = ["packages/agent", "packages/shared", "packages/workflow"]
+
+[tool.uv.sources]
+agent-service = { workspace = true }
+workflow-service = { workspace = true }
+shared = { workspace = true }
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["packages/agent"]
+testpaths = ["packages/agent/tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: marks tests requiring a live database (deselect with -m 'not integration')",
+    "worker: marks tests for the SQS worker loop",
+]
+
+# Used by `coverage` CLI and for consistent paths; pytest-cov should use
+# `--cov=packages/agent/app` (not `--cov=app`) so line data is collected for this layout.
+[tool.coverage.run]
+source = ["packages/agent/app"]

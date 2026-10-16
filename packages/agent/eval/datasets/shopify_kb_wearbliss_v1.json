@@ -1,0 +1,638 @@
+{
+  "version": "shopify_kb_wearbliss_v1",
+  "description": "Shopify + Knowledge Base eval cases modelled on the live Wear Bliss store (https://wearbliss.store) — a unisex streetwear shop that ships within India. Exercises the two retrieval dimensions of the web agent: live catalog lookups (`get_products`) and policy/KB grounding (`search_knowledgebase`), plus order status (`get_order_status`). Cases are split into single-turn routing/grounding checks and several multi-turn conversations (shared chat_id, ordered by `sequence`) that mirror how a real shopper drifts between browsing, policy questions, and order tracking. Skill/aide routing (ticket/lead/handoff) is intentionally out of scope here — that lives in the skills_routing datasets.",
+  "notes": [
+    "All cases point at the shopify_kb_aide staging agent (106f41ee-e09f-4536-8e38-c8178145429a). Repoint before running if your staging agent_id differs. The agent must have Shopify connected to the Wear Bliss store AND a knowledge base loaded with the store's policy pages (shipping, refund, privacy, terms, contact, about) for the KB cases to retrieve real context.",
+    "Routing contract (matches web_agent_v1): shopping intent — browse, recommend, price, availability, size — routes to `get_products` only. Policy / terms / privacy / shipping / returns / contact questions route to `search_knowledgebase` only. Order tracking routes to `get_order_status`. Greetings, thanks, and out-of-scope chit-chat call no tool ([]). trajectory_evaluator uses set semantics and penalises extras 0.1 each, so expected_tools is the single correct tool per turn.",
+    "Scoring uses the RAG triad + trajectory only (faithfulness, response_relevancy, context_precision, trajectory). The answer_correctness rubric judge has been removed for this use case, so cases carry NO golden_reply field. Product-intent and policy-fact quality is covered by faithfulness (grounding) + response_relevancy (on-topic) + trajectory (right tool).",
+    "Facts the KB rubrics are grounded in (from the live policy pages, captured 2026-06): return window 30 days (14 for EU); refunds to original payment method within 10 business days; free prepaid return label; sale items + gift cards non-returnable; exchange = return then re-buy; ships within India only, NO international; processing 1-2 business days; metro delivery 2-4 business days, other regions 4-7; free shipping over Rs.2000; COD carries an extra fee; tracking via email/SMS; report damaged/lost within 48 hours; privacy collects contact/financial/account/device data and shares with Shopify, deletion on request; support email wearbliss@example.com; terms require age of majority and personal (non-resale) use.",
+    "Multi-turn flows share one chat_id and run serially by sequence; the runner threads them through the production checkpointer. Pure context-builder or genuinely ambiguous turns are marked score_judges:false so they don't drag judge averages; turns with a clear expected behaviour are scored.",
+    "Upload: python -m app.modules.evals.cli upload-dataset --name shopify_kb_wearbliss_v1 --path packages/agent/eval/datasets/shopify_kb_wearbliss_v1.json"
+  ],
+  "cases": [
+    {
+      "id": "wb-product-hoodie-001",
+      "query": "do you have any hoodies?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:hoodies"
+      ]
+    },
+    {
+      "id": "wb-product-graphic-tee-001",
+      "query": "show me some oversized graphic t-shirts",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:t-shirts"
+      ]
+    },
+    {
+      "id": "wb-product-cheapest-tee-001",
+      "query": "what's the cheapest t-shirt you've got?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "intent:price-sort"
+      ]
+    },
+    {
+      "id": "wb-product-formal-trousers-001",
+      "query": "looking for formal trousers for the office",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:bottoms"
+      ]
+    },
+    {
+      "id": "wb-product-womens-top-001",
+      "query": "got any women's tops in stock?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:womens",
+        "intent:availability"
+      ]
+    },
+    {
+      "id": "wb-product-bag-001",
+      "query": "I want a tote bag, what do you have?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:accessories",
+        "category:bags"
+      ]
+    },
+    {
+      "id": "wb-product-cap-001",
+      "query": "do you sell caps?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:accessories",
+        "category:caps"
+      ]
+    },
+    {
+      "id": "wb-product-footwear-001",
+      "query": "any sandals or shoes?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:footwear"
+      ]
+    },
+    {
+      "id": "wb-product-jewellery-001",
+      "query": "do you have any jewellery for gifting?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "category:accessories",
+        "category:jewellery"
+      ]
+    },
+    {
+      "id": "wb-product-nonexistent-001",
+      "query": "do you sell winter snow boots or ski jackets?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "product",
+        "shopify",
+        "single-turn",
+        "negative:no-match",
+        "hallucination-guard"
+      ]
+    },
+    {
+      "id": "wb-policy-return-window-001",
+      "query": "what's your return window?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:returns"
+      ]
+    },
+    {
+      "id": "wb-policy-refund-time-001",
+      "query": "how long do refunds take to come through?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:refunds"
+      ]
+    },
+    {
+      "id": "wb-policy-return-shipping-cost-001",
+      "query": "if I return something do I have to pay for return shipping?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:returns"
+      ]
+    },
+    {
+      "id": "wb-policy-non-returnable-001",
+      "query": "can I return sale items or a gift card?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:returns"
+      ]
+    },
+    {
+      "id": "wb-policy-exchange-001",
+      "query": "I want to exchange a hoodie for a different size, how does that work?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:exchange"
+      ]
+    },
+    {
+      "id": "wb-policy-international-shipping-001",
+      "query": "do you ship internationally?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:shipping"
+      ]
+    },
+    {
+      "id": "wb-policy-free-shipping-001",
+      "query": "is there free shipping?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:shipping"
+      ]
+    },
+    {
+      "id": "wb-policy-delivery-time-001",
+      "query": "how long will delivery take to a metro city?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:shipping"
+      ]
+    },
+    {
+      "id": "wb-policy-damaged-order-001",
+      "query": "my parcel arrived damaged, what should I do?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "policy",
+        "kb",
+        "single-turn",
+        "topic:shipping",
+        "topic:damaged"
+      ]
+    },
+    {
+      "id": "wb-privacy-data-collected-001",
+      "query": "what personal data do you collect about me?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "privacy",
+        "kb",
+        "single-turn",
+        "topic:privacy"
+      ]
+    },
+    {
+      "id": "wb-privacy-third-party-001",
+      "query": "do you share my information with third parties?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "privacy",
+        "kb",
+        "single-turn",
+        "topic:privacy"
+      ]
+    },
+    {
+      "id": "wb-terms-resale-001",
+      "query": "can I buy from you in bulk to resell?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "terms",
+        "kb",
+        "single-turn",
+        "topic:terms"
+      ]
+    },
+    {
+      "id": "wb-terms-age-001",
+      "query": "is there a minimum age to place an order?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "terms",
+        "kb",
+        "single-turn",
+        "topic:terms"
+      ]
+    },
+    {
+      "id": "wb-contact-email-001",
+      "query": "how do I contact customer support?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "contact",
+        "kb",
+        "single-turn",
+        "topic:contact"
+      ]
+    },
+    {
+      "id": "wb-order-status-001",
+      "query": "where's my order #1190?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_order_status"
+      ],
+      "tags": [
+        "order-status",
+        "shopify",
+        "single-turn"
+      ]
+    },
+    {
+      "id": "wb-order-status-002",
+      "query": "has my order shipped yet? order 1207",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [
+        "get_order_status"
+      ],
+      "tags": [
+        "order-status",
+        "shopify",
+        "single-turn"
+      ]
+    },
+    {
+      "id": "wb-greeting-001",
+      "query": "hey there",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [],
+      "tags": [
+        "greeting",
+        "no-tool",
+        "single-turn"
+      ]
+    },
+    {
+      "id": "wb-outofscope-001",
+      "query": "what's the weather like in Mumbai today?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "expected_tools": [],
+      "tags": [
+        "out-of-scope",
+        "no-tool",
+        "single-turn",
+        "negative"
+      ]
+    },
+    {
+      "id": "wb-flow-browse-return-1",
+      "query": "hi, I'm looking for a graphic hoodie",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "97134ad0-59db-4c96-8e1d-50e4cf6989eb",
+      "sequence": 1,
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "multi-turn",
+        "product",
+        "shopify",
+        "flow:browse-then-policy"
+      ]
+    },
+    {
+      "id": "wb-flow-browse-return-2",
+      "query": "nice, and if it doesn't fit can I return it?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "97134ad0-59db-4c96-8e1d-50e4cf6989eb",
+      "sequence": 2,
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "multi-turn",
+        "policy",
+        "kb",
+        "topic:returns",
+        "flow:browse-then-policy"
+      ]
+    },
+    {
+      "id": "wb-flow-browse-return-3",
+      "query": "and how long until I get my money back?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "97134ad0-59db-4c96-8e1d-50e4cf6989eb",
+      "sequence": 3,
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "multi-turn",
+        "policy",
+        "kb",
+        "topic:refunds",
+        "flow:browse-then-policy"
+      ]
+    },
+    {
+      "id": "wb-flow-refine-1",
+      "query": "I need a casual shirt",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "eeda26f6-0de3-49c9-b72d-65ab5de1b3ac",
+      "sequence": 1,
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "multi-turn",
+        "product",
+        "shopify",
+        "flow:refine-search"
+      ]
+    },
+    {
+      "id": "wb-flow-refine-2",
+      "query": "something under 600 rupees",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "eeda26f6-0de3-49c9-b72d-65ab5de1b3ac",
+      "sequence": 2,
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "multi-turn",
+        "product",
+        "shopify",
+        "intent:price-filter",
+        "flow:refine-search"
+      ]
+    },
+    {
+      "id": "wb-flow-refine-3",
+      "query": "do those come in XL?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "eeda26f6-0de3-49c9-b72d-65ab5de1b3ac",
+      "sequence": 3,
+      "score_judges": false,
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "multi-turn",
+        "product",
+        "shopify",
+        "intent:size",
+        "flow:refine-search"
+      ]
+    },
+    {
+      "id": "wb-flow-shipping-deep-1",
+      "query": "do you deliver to the US?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "18d39f3a-dd40-46c5-af36-918782159ca8",
+      "sequence": 1,
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "multi-turn",
+        "policy",
+        "kb",
+        "topic:shipping",
+        "flow:shipping-deep-dive"
+      ]
+    },
+    {
+      "id": "wb-flow-shipping-deep-2",
+      "query": "ok within India, is shipping free?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "18d39f3a-dd40-46c5-af36-918782159ca8",
+      "sequence": 2,
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "multi-turn",
+        "policy",
+        "kb",
+        "topic:shipping",
+        "flow:shipping-deep-dive"
+      ]
+    },
+    {
+      "id": "wb-flow-shipping-deep-3",
+      "query": "and how soon would it reach Bangalore?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "18d39f3a-dd40-46c5-af36-918782159ca8",
+      "sequence": 3,
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "multi-turn",
+        "policy",
+        "kb",
+        "topic:shipping",
+        "flow:shipping-deep-dive"
+      ]
+    },
+    {
+      "id": "wb-flow-mixed-1",
+      "query": "hey",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "7b82c191-674c-45a4-b5c1-51b30985a24c",
+      "sequence": 1,
+      "score_judges": false,
+      "expected_tools": [],
+      "tags": [
+        "multi-turn",
+        "greeting",
+        "no-tool",
+        "flow:mixed"
+      ]
+    },
+    {
+      "id": "wb-flow-mixed-2",
+      "query": "do you have any joggers?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "7b82c191-674c-45a4-b5c1-51b30985a24c",
+      "sequence": 2,
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "multi-turn",
+        "product",
+        "shopify",
+        "category:bottoms",
+        "flow:mixed"
+      ]
+    },
+    {
+      "id": "wb-flow-mixed-3",
+      "query": "thanks! also can you check where my order #1242 is?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "7b82c191-674c-45a4-b5c1-51b30985a24c",
+      "sequence": 3,
+      "expected_tools": [
+        "get_order_status"
+      ],
+      "tags": [
+        "multi-turn",
+        "order-status",
+        "shopify",
+        "flow:mixed"
+      ]
+    },
+    {
+      "id": "wb-flow-product-vs-policy-1",
+      "query": "I'm thinking about buying the everyday joggers",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "21915dd5-8550-4862-ad7d-f6989d959341",
+      "sequence": 1,
+      "expected_tools": [
+        "get_products"
+      ],
+      "tags": [
+        "multi-turn",
+        "product",
+        "shopify",
+        "flow:product-then-terms"
+      ]
+    },
+    {
+      "id": "wb-flow-product-vs-policy-2",
+      "query": "are they final sale or can I send them back if I change my mind?",
+      "agent_id": "106f41ee-e09f-4536-8e38-c8178145429a",
+      "chat_id": "21915dd5-8550-4862-ad7d-f6989d959341",
+      "sequence": 2,
+      "expected_tools": [
+        "search_knowledgebase"
+      ],
+      "tags": [
+        "multi-turn",
+        "policy",
+        "kb",
+        "topic:returns",
+        "flow:product-then-terms"
+      ]
+    }
+  ]
+}

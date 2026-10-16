@@ -1,0 +1,25 @@
+{
+  "agent_id": "eval-shopify-kb-aide",
+  "user_id": "eval-user",
+  "config": {
+    "human_handoff_enabled": true,
+    "persona": {
+      "personaName": "Riley",
+      "personaDescription": "Friendly, concise store assistant. Helps customers find products, resolve order issues, and connects them with the team when needed.",
+      "model": "gpt-4o-mini"
+    },
+    "apps": [
+      {"id": "app-shopify", "slug": "shopify"}
+    ],
+    "skills": [
+      {"id": "skill-handoff", "name": "Escalate to human", "toolName": "human_handoff_trigger", "config": {}},
+      {"id": "skill-lead", "name": "Customer Creation", "toolName": "create_lead_aide", "config": {}},
+      {"id": "skill-ticket", "name": "Ticket Creation", "toolName": "create_ticket_aide", "config": {}}
+    ],
+    "entityIds": ["kb-entity-eval"],
+    "folderIds": [],
+    "appsConfig": [],
+    "ownerEmail": "eval@example.com",
+    "crmAiPopulatedFields": []
+  }
+}

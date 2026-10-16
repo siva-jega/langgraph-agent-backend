@@ -1,0 +1,217 @@
+from __future__ import annotations
+
+TOOLS_DATA: dict[str, dict[str, str | bool | list[str] | list[dict[str, object]]]] = {
+    "get_products": {
+        "id": "get_products",
+        "name": "Get Products",
+        "description": "Search Shopify products and return relevant product details (optionally using retrieval-backed relevance).",
+        "compatible_triggers": ["*"],
+        "input_parameters": [
+            {
+                "key": "search_title",
+                "type": "string",
+                "label": "Search Query",
+                "description": "Product name or keyword to search for. Use an expression to pull from a previous node (e.g. a product title or search query the visitor used).",
+                "required": True,
+            },
+            {
+                "key": "original_user_query",
+                "type": "string",
+                "label": "Original Query (unmodified)",
+                "description": "The raw search term as-is. For most cases, use the same value as Search Query.",
+                "required": True,
+            },
+            {
+                "key": "query_for_dense_search",
+                "type": "string",
+                "label": "Semantic Search Query",
+                "description": "Query optimised for vector/semantic search. Usually the same as Search Query.",
+                "required": True,
+            },
+            {
+                "key": "query_for_sparse_search",
+                "type": "string",
+                "label": "Keyword Search Query",
+                "description": "Query optimised for keyword matching. Usually the same as Search Query.",
+                "required": True,
+            },
+            {
+                "key": "limit",
+                "type": "number",
+                "label": "Max Results",
+                "description": "Maximum number of products to return.",
+                "required": False,
+                "default": 10,
+            },
+        ],
+        "output_parameters": [
+            {"key": "products", "type": "array", "description": "List of matching products. Each: { title, price, image_url, url, variants }."},
+        ],
+    },
+    "get_order_status": {
+        "id": "get_order_status",
+        "name": "Get Order Status",
+        "description": "Fetch Shopify order status by order id, or list orders for a given customer email.",
+        "compatible_triggers": ["*"],
+        "input_parameters": [
+            {
+                "key": "order_id",
+                "type": "string",
+                "label": "Order ID",
+                "description": "Shopify order ID. Use an expression to reference the order from a trigger (e.g. {{ $trigger.output.data.order.id }}). Provide either this or Customer Email.",
+                "required": False,
+            },
+            {
+                "key": "customer_email",
+                "type": "string",
+                "label": "Customer Email",
+                "description": "Look up all orders for this customer email. Provide either this or Order ID.",
+                "required": False,
+            },
+        ],
+        "output_parameters": [
+            {"key": "order", "type": "object", "description": "Single order details (when order_id provided): status, items, shipping, tracking."},
+            {"key": "orders", "type": "array", "description": "All orders for the customer (when customer_email provided)."},
+        ],
+    },
+    "get_checkout": {
+        "id": "get_checkout",
+        "name": "Get Checkout",
+        "description": "Check if a Shopify checkout is completed or abandoned. Used in cart abandonment workflows.",
+        "compatible_triggers": ["checkout.created"],
+        "input_parameters": [
+            {
+                "key": "checkout_token",
+                "type": "string",
+                "label": "Checkout Token",
+                "description": "Token from the checkout.created trigger. Use {{ $trigger.output.data.cart.id }}.",
+                "required": True,
+            },
+        ],
+        "output_parameters": [
+            {"key": "is_abandoned", "type": "boolean", "description": "True if the checkout was not completed."},
+            {"key": "status", "type": "string", "description": "Checkout status."},
+        ],
+    },
+    "check_cart_status": {
+        "id": "check_cart_status",
+        "name": "Check Cart Status",
+        "description": "Check the status of a visitor cart session (CART_ACTIVE, CHECKOUT_STARTED, ORDER_COMPLETED, CART_ABANDONED). Has built-in YES/NO branches — YES if ORDER_COMPLETED, NO otherwise.",
+        "compatible_triggers": ["product.added_to_cart", "cart.viewed", "cart.active"],
+        "branches": True,
+        "input_parameters": [
+            {
+                "key": "mark_abandoned",
+                "type": "boolean",
+                "label": "Mark as Abandoned",
+                "description": "If enabled, atomically marks CART_ACTIVE sessions as CART_ABANDONED on read. Disable to check status without changing it.",
+                "required": False,
+                "default": True,
+            },
+        ],
+        "output_parameters": [
+            {"key": "found", "type": "boolean", "description": "Whether the cart session was found."},
+            {"key": "status", "type": "string", "description": "Cart session status: CART_ACTIVE, CHECKOUT_STARTED, ORDER_COMPLETED, or CART_ABANDONED."},
+            {"key": "branch", "type": "string", "description": "Branch taken: 'true' if ORDER_COMPLETED, 'false' otherwise."},
+            {"key": "email", "type": "string", "description": "Customer email from CRM (Customer table), falling back to the session email captured at checkout. Null if unknown."},
+            {"key": "phone", "type": "string", "description": "Customer phone number from CRM (Customer table). Null if the visitor has not been identified or has no phone on record."},
+            {"key": "customerId", "type": "string", "description": "Internal CRM customer ID if the visitor has been identified, otherwise null."},
+            {"key": "cartUrl", "type": "string", "description": "Full URL to the visitor's cart (e.g. https://store.myshopify.com/cart)."},
+            {"key": "items", "type": "array", "description": "Cart line items with title, price, quantity, and full product URL."},
+            {"key": "totalPrice", "type": "number", "description": "Cart total price in the store's smallest currency unit."},
+            {"key": "currency", "type": "string", "description": "Currency code, e.g. INR, USD."},
+        ],
+    },
+    "check_checkout_status": {
+        "id": "check_checkout_status",
+        "name": "Check Checkout Status",
+        "description": "Check whether a Shopify checkout was completed or abandoned, using the internal event log. Has built-in YES/NO branches — YES if COMPLETED, NO if ABANDONED or not found.",
+        "compatible_triggers": ["checkout.created"],
+        "branches": True,
+        "input_parameters": [
+            {
+                "key": "mark_abandoned",
+                "type": "boolean",
+                "label": "Mark as Abandoned",
+                "description": "If enabled (default), treats incomplete checkouts as ABANDONED on read. Disable to check status without marking.",
+                "required": False,
+                "default": True,
+            },
+        ],
+        "output_parameters": [
+            {"key": "found", "type": "boolean", "description": "Whether checkout events were found for this token."},
+            {"key": "status", "type": "string", "description": "Checkout status: PENDING, COMPLETED, or ABANDONED."},
+            {"key": "branch", "type": "string", "description": "Branch taken: 'true' if COMPLETED, 'false' if ABANDONED or not found."},
+            {"key": "email", "type": "string", "description": "Customer email if captured during checkout, otherwise null."},
+            {"key": "recoverUrl", "type": "string", "description": "Shopify abandoned checkout recovery URL."},
+            {"key": "items", "type": "array", "description": "Checkout line items with title, price, and quantity."},
+        ],
+    },
+    "fetch_session_events": {
+        "id": "fetch_session_events",
+        "name": "Fetch Session Events",
+        "description": "Fetch all Shopify pixel events for the current visitor session within a lookback window (default 30 min). Use after a product.viewed, cart.viewed, or search trigger to see everything the visitor did — products browsed, searches made, items added to cart.",
+        "compatible_triggers": [
+            "product.viewed", "collection.viewed", "search.submitted",
+            "product.added_to_cart", "cart.viewed",
+        ],
+        "input_parameters": [
+            {
+                "key": "event_types",
+                "type": "array",
+                "label": "Event Types",
+                "description": "",
+                "required": False,
+                "options": [
+                    "product_viewed",
+                    "product_added_to_cart",
+                    "cart_viewed",
+                    "collection_viewed",
+                    "search_submitted",
+                    "checkout_started",
+                    "checkout_completed",
+                ],
+            },
+            {
+                "key": "lookback_minutes",
+                "type": "number",
+                "label": "Lookback (minutes)",
+                "description": "How far back to look for events. Default 30.",
+                "required": False,
+                "default": 30,
+            },
+        ],
+        "output_parameters": [
+            {"key": "product_viewed.count", "type": "number", "description": "Number of product_viewed events in the window."},
+            {"key": "product_viewed.items", "type": "array", "description": "product_viewed events. Each: { productId, variantId, productTitle, price, currencyCode, imageUrl, url }."},
+            {"key": "collection_viewed.count", "type": "number", "description": "Number of collection_viewed events in the window."},
+            {"key": "collection_viewed.items", "type": "array", "description": "collection_viewed events."},
+            {"key": "search_submitted.count", "type": "number", "description": "Number of search_submitted events in the window."},
+            {"key": "search_submitted.items", "type": "array", "description": "search_submitted events. Each: { searchQuery, searchResultCount }."},
+            {"key": "product_added_to_cart.count", "type": "number", "description": "Number of add-to-cart events in the window."},
+            {"key": "product_added_to_cart.items", "type": "array", "description": "add-to-cart events. Each: { productId, variantId, productTitle, quantity, price, currencyCode }."},
+        ],
+    },
+    "resolve_identity": {
+        "id": "resolve_identity",
+        "name": "Resolve Visitor Identity",
+        "description": "Resolves a Shopify visitor (shopifyClientId) to their contact info — email, phone, sessionId. Use after any pixel trigger to identify anonymous visitors before choosing a channel. Has built-in YES/NO branches — YES if identity found, NO if anonymous.",
+        "compatible_triggers": [
+            "product.viewed", "collection.viewed", "search.submitted",
+            "product.added_to_cart", "cart.viewed",
+        ],
+        "branches": True,
+        "input_parameters": [],
+        "output_parameters": [
+            {"key": "found", "type": "boolean", "description": "True if the visitor has a known identity (linked chat session with customer record)."},
+            {"key": "branch", "type": "string", "description": "Branch taken: 'true' if found, 'false' if anonymous."},
+            {"key": "sessionId", "type": "string", "description": "Widget session ID linked to this visitor."},
+            {"key": "customerId", "type": "string", "description": "CRM customer ID."},
+            {"key": "email", "type": "string", "description": "Customer email address."},
+            {"key": "phone", "type": "string", "description": "Customer phone number."},
+        ],
+    },
+}
+
+__all__ = ["TOOLS_DATA"]
+

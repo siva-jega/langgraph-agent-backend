@@ -67,9 +67,19 @@ class TriggerRepository:
             )
             return dict(row) if row else None
 
-    async def update(self, trigger_id: str, fields: dict[str, Any]) -> dict | None:
+    async def update(
+        self, workflow_def_id: str, trigger_id: str, fields: dict[str, Any]
+    ) -> dict | None:
         if not fields:
-            return await self.get_by_id(trigger_id)
+            pg = get_pg()
+            async with pg.acquire() as conn:
+                row = await conn.fetchrow(
+                    '''SELECT * FROM public."WorkflowTrigger"
+                       WHERE id = $1 AND "workflowDefinitionId" = $2''',
+                    trigger_id,
+                    workflow_def_id,
+                )
+                return dict(row) if row else None
 
         set_clauses = []
         params: list[Any] = []
@@ -94,21 +104,24 @@ class TriggerRepository:
         query = f"""
             UPDATE public."WorkflowTrigger"
             SET {", ".join(set_clauses)}
-            WHERE id = ${idx}
+            WHERE id = ${idx} AND "workflowDefinitionId" = ${idx + 1}
             RETURNING *
         """
+        params.append(workflow_def_id)
 
         pg = get_pg()
         async with pg.acquire() as conn:
             row = await conn.fetchrow(query, *params)
             return dict(row) if row else None
 
-    async def delete(self, trigger_id: str) -> bool:
+    async def delete(self, workflow_def_id: str, trigger_id: str) -> bool:
         pg = get_pg()
         async with pg.acquire() as conn:
             result = await conn.execute(
-                'DELETE FROM public."WorkflowTrigger" WHERE id = $1',
+                '''DELETE FROM public."WorkflowTrigger"
+                   WHERE id = $1 AND "workflowDefinitionId" = $2''',
                 trigger_id,
+                workflow_def_id,
             )
             return result == "DELETE 1"
 
